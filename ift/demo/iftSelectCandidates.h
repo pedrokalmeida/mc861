@@ -16,13 +16,49 @@ void iftRemoveSmallComponents(iftImage *img, int minVolume) {
     int max = iftMaximumValue(img);
     int *volume = iftAllocIntArray(max + 1);
     int *labels = iftAllocIntArray(max + 1);
+	int *minorx  = iftAllocIntArray(max + 1);
+	int *largerx  = iftAllocIntArray(max + 1);
+	int *minory = iftAllocIntArray(max + 1);
+	int *largery = iftAllocIntArray(max + 1);
 
     for (p = 0; p < img->n; ++p) {
-        if (img->val[p] > 0)
-            volume[img->val[p]]++;
+        if (img->val[p] > 0) {
+            volume[img->val[p]]++;   //determina o tamanho de cada candidato/componente da imagem
+			if (p/img->xsize < minory[img->val[p]])
+				minory[img->val[p]] = p/img->xsize;
+			if (p/img->xsize > largery[img->val[p]])
+				largery[img->val[p]] = p/img->xsize;
+			
+			if (p%img->xsize < minorx[img->val[p]])
+				minorx[img->val[p]] = p%img->xsize;
+			if (p%img->xsize > largerx[img->val[p]]) 
+				largerx[img->val[p]] = p%img->xsize;
+		}
     }
+	
+	printf("\n menor y: ");
 
-    int nlabels = 1;
+	for (p = 1; p <= max; p++)
+		printf("%d ", minory[p]);
+
+	printf("\n maior y: ");
+
+	for (p = 1; p <= max; p++)
+		printf("%d ", largery[p]);
+
+	printf("\n menor x: ");
+
+	for (p = 1; p <= max; p++)
+		printf("%d ", minorx[p]);
+
+	printf("\n maior x: ");
+
+	for (p = 1; p <= max; p++)
+		printf("%d ", largerx[p]);
+
+	printf("\n \n");
+
+    int nlabels = 1;				//determina os candidatos que sao maiores que o tamanho de corte
     for (i = 1; i <= max; ++i) {
         if (volume[i] >= minVolume)
             labels[i] = nlabels++;
@@ -30,7 +66,7 @@ void iftRemoveSmallComponents(iftImage *img, int minVolume) {
             labels[i] = 0;
     }
 
-    for (p = 0; p < img->n; ++p) {
+    for (p = 0; p < img->n; ++p) {			//apaga os candidatos menores que o tamanho de corte
         img->val[p] = labels[img->val[p]];
     }
 
