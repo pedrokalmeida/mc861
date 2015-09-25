@@ -79,10 +79,9 @@ iftImage *selectCandidates(iftImage *orig) {
     iftImage *aux[4];
     iftKernel *K = NULL;
     iftAdjRel *A = NULL;
-
+    
     A = iftCircular(5.0);
     aux[0] = iftNormalizeImage(orig, A, 4095);
-
     aux[1] = iftCloseBasins(aux[0]);
     aux[2] = iftSub(aux[1], aux[0]);
     iftDestroyImage(&aux[1]);
@@ -101,14 +100,10 @@ iftImage *selectCandidates(iftImage *orig) {
     int t = iftOtsu(aux[0]);
 
     aux[2] = iftThreshold(aux[0], t, max, 255);
-
     A = iftCircular(2.0);
     aux[3] = iftFastLabelComp(aux[2], A);
-
     iftRemoveSmallComponents(aux[3], MIN_VOLUME);
-
     iftImage* final = iftAddRectangularBoxFrame(aux[3], 4, 0, 0, 0);
-
     iftDestroyImage(&aux[0]);
     iftDestroyImage(&aux[1]);
     iftDestroyImage(&aux[2]);
