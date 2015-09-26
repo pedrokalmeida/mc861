@@ -21,6 +21,11 @@ void iftRemoveSmallComponents(iftImage *img, int minVolume) {
 	int *minory = iftAllocIntArray(max + 1);
 	int *largery = iftAllocIntArray(max + 1);
 
+	for (p = 0; p < max+1; ++p) {
+		minory[p] = img->ysize;
+		minorx[p] = img->xsize;
+	}
+
     for (p = 0; p < img->n; ++p) {
         if (img->val[p] > 0) {
             volume[img->val[p]]++;   //determina o tamanho de cada candidato/componente da imagem
@@ -36,7 +41,7 @@ void iftRemoveSmallComponents(iftImage *img, int minVolume) {
 		}
     }
 	
-	printf("\n menor y: ");
+/*	printf("\n menor y: ");
 
 	for (p = 1; p <= max; p++)
 		printf("%d ", minory[p]);
@@ -56,17 +61,23 @@ void iftRemoveSmallComponents(iftImage *img, int minVolume) {
 	for (p = 1; p <= max; p++)
 		printf("%d ", largerx[p]);
 
-	printf("\n \n");
+	printf("\n \n"); */
 
     int nlabels = 1;				//determina os candidatos que sao maiores que o tamanho de corte
     for (i = 1; i <= max; ++i) {
-        if (volume[i] >= minVolume)
-            labels[i] = nlabels++;
-        else
-            labels[i] = 0;
+
+		if ((largerx[i] - minorx[i]) < (largery[i] - minory[i])) {
+			labels[i] = 0;
+		}
+		else {		
+        	if (volume[i] >= minVolume)
+            	labels[i] = nlabels++;
+        	else
+            	labels[i] = 0;
+		}
     }
 
-    for (p = 0; p < img->n; ++p) {			//apaga os candidatos menores que o tamanho de corte
+    for (p = 0; p < img->n; ++p) {			//apaga os candidatos desconsiderados
         img->val[p] = labels[img->val[p]];
     }
 
