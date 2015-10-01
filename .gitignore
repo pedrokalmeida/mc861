@@ -1,2 +1,4 @@
 # ignorar executaveis
 ift/bin/
+# ignorar outputs
+images/output/
