@@ -21,6 +21,8 @@
 #define HOG_N3 3
 #define HOG_M3 3
 
+#define DEBUG_ON 0
+
 iftImage *firstStep_normalize_v1(iftImage *orig) {
 	iftAdjRel *adj = iftCircular(HOG_r_normalize);
 	
@@ -156,17 +158,27 @@ double nzdouble(int a){
 	return ((double)a)+0.00001;
 }
 
-iftHistogram *thirdStep_histogram(iftImage *img, iftImage *g_mag, iftImage *g_orient, iftImage* bb_img) {
+int debugHistogramPrinted = 0;
+
+iftHistogram *thirdStep_histogram(iftImage *img, iftImage *g_mag, iftImage *g_orient, int x0, int y0) {
+	// TODO: Liberar memoria alocada.
+	// TODO: Definir/Estimar melhor as constantes.
+	// TODO: Parar de recortar a imagem (o ideal seria aumentar ainda mais a caixinha recebida, mas como fazer isso aqui seria chatinho, e fazer isso no SelectCandidates seria relativamente mais facil, acho valido fazer isso por lá mesmo).
+	// TODO: Testar os vetores hog sendo gerados atraves de um classificar SVM.
 	// Definicao da janela n1xm1 em torno de bb_img
-	int n1 = bb_img->xsize;
-	int m1 = bb_img->ysize;
 	// Divisao da janela em celulas inteiras n2xm2
 	int n2=6;
 	int m2=6;
 
-	// Gambi01: recortamos a imagem para ter um numero inteiro de celulas
-	n1 = (n1/n2)*n2;
-	m1 = (m1/m2)*m2;
+	int n3 = 6;
+	int m3 = 6;
+
+	//// Gambi01: recortamos a imagem para ter um numero inteiro de celulas
+	//n1 = (n1/n2)*n2;
+	//m1 = (m1/m2)*m2;
+	// Definicao da janela n1xm1 em torno de bb_img
+	int n1 = 3*(n2*n3);
+	int m1 = 3*(m2*m3);
 
 	// Geracao de um histograma por celula, utilizando a orientacao
 	int numCelulas = (n1*m1)/(n2*m2);
@@ -187,13 +199,17 @@ iftHistogram *thirdStep_histogram(iftImage *img, iftImage *g_mag, iftImage *g_or
 			int bin;
 			int theta = 45;
 
-			celula = (j/m2) + (m1/m2)*(i/n2);
+			//celula = (j/m2) + (m1/m2)*(i/n2);
+			celula = (i+x0)/m2 + (j+y0)/n2;
 
-			if(g_orient->val[i+n1*m1] == 0){
-				bin = 0;
-			} else {
-				bin = g_orient->val[i+n1*m1]/theta;
-			}
+			//if(g_orient->val[i+n1*m1] == 0){
+			//	bin = 0;
+			//} else {
+			//	bin = g_orient->val[(i+x)+n1*m1]/theta;
+			//}
+
+			//bin = g_orient->val[(i+x)+n1*m1]/theta;
+			bin = g_orient->val[(i+x0)*m2 + (j+y0)]/theta;
 
 			if (celula < numCelulas && bin < numBins)
 				histogramas->sample[celula].feat[bin]++;
@@ -202,7 +218,10 @@ iftHistogram *thirdStep_histogram(iftImage *img, iftImage *g_mag, iftImage *g_or
 		}
 	}
 
+	//BUG!! Nao estou usando isso em lugar nenhum, pra que gerei esses dados?? Hahahaha
+	iftDestroyDataSet(&histogramas);
 
+	if(DEBUG_ON)
 	printf ("Histograma Gerado!\n");
 	// Normalizacao dos histogramas com base nos blocos
 	iftDataSet* histogramasNormalizados = iftCreateDataSet(numCelulas, numBins);
@@ -212,16 +231,22 @@ iftHistogram *thirdStep_histogram(iftImage *img, iftImage *g_mag, iftImage *g_or
 		}
 		histogramasNormalizados->sample[i].id = i;
 	}
-	printf ("Histograma Gerado!\n");
 
 	for(int i=0; i<n1; i++){
 		for(int j=0; j<m1; j++){
-			int celula1 = (j/m2) + (m1/m2)*(i/n2);
+			//int celula1 = (j/m2) + (m1/m2)*(i/n2);
+			//int celula2 = celula1 + 1;
+			//int celula3 = (j/m2) + (m1/m2)*(1 + (i/n2));
+			//int celula4 = celula3 + 1;
+
+			int celula1 = (i)/m2 + (j)/n2;
 			int celula2 = celula1 + 1;
-			int celula3 = (j/m2) + (m1/m2)*(1 + (i/n2));
+			int celula3 = (i+1)/m2 + (j)/n2;
 			int celula4 = celula3 + 1;
+
 			int theta = 45;
 			
+			/*
 			int bin1;
 			if(g_orient->val[i+n1*m1] == 0){
 				bin1 = 0;
@@ -235,8 +260,24 @@ iftHistogram *thirdStep_histogram(iftImage *img, iftImage *g_mag, iftImage *g_or
 			} else {
 				bin2 = ((double)g_orient->val[i+n1*m1] + ((double)theta)/2.0)/((double)theta);g_orient->val[i+n1*m1]/theta;
 			}
+			*/
 
-			int x = i/n2;
+			int bin1;
+			if(g_orient->val[(i+x0)*m2 + (j+y0)] == 0){
+				bin1 = 0;
+			} else {
+				bin1 = ((double)g_orient->val[(i+x0)*m2 + (j+y0)] - ((double)theta)/2.0)/((double)theta);
+			}
+
+			int bin2;
+			if(g_orient->val[(i+x0)*m2 + (j+y0)] == 0){
+				bin2 = 1;
+			} else {
+				bin2 = ((double)g_orient->val[(i+x0)*m2 + (j+y0)] + ((double)theta)/2.0)/((double)theta);
+			}
+
+			//int x = i/n2;
+			int x = (i+x0)*m2;
 			int x1 = (ddouble(i)-0.5*ddouble(n1))/ddouble(n1);
 			int x2 = (ddouble(i)+0.5*ddouble(n1))/ddouble(n1);
 			int x3 = x1;
@@ -252,7 +293,7 @@ iftHistogram *thirdStep_histogram(iftImage *img, iftImage *g_mag, iftImage *g_or
 			int x13 = x6;
 			int x14 = x5;
 
-			int y = j/m2;
+			int y = j + y0;
 			int y1 = y;
 			int y2 = y;
 			int y3 = (ddouble(j)-0.5*ddouble(m1))/ddouble(m1);
@@ -268,7 +309,7 @@ iftHistogram *thirdStep_histogram(iftImage *img, iftImage *g_mag, iftImage *g_or
 			int y13 = y12;
 			int y14 = y11;
 
-			int z = g_orient->val[i+n1*m1];
+			int z = g_orient->val[(i+x0)*m2 + (j+y0)];
 			int z1 = z;
 			int z2 = z;
 			int z3 = z;
@@ -284,7 +325,7 @@ iftHistogram *thirdStep_histogram(iftImage *img, iftImage *g_mag, iftImage *g_or
 			int z13 = z11;
 			int z14 = z11;
 
-			double w = g_mag->val[i+n1*m1];
+			double w = g_mag->val[(i+x)*m2 + (j+y)];
 			double w1 = (w/nzdouble(x2-x1))*(nzdouble(x2-x));
 			double w2 = (w/nzdouble(x2-x1))*(nzdouble(x-x1));
 			double w3 = (w1/nzdouble(y3-y4))*(nzdouble(y1-y4));
@@ -300,19 +341,19 @@ iftHistogram *thirdStep_histogram(iftImage *img, iftImage *g_mag, iftImage *g_or
 			double w9 = (w6/nzdouble(z13-z9))*(nzdouble(z13-z6));
 			double w13 = (w6/nzdouble(z13-z9))*(nzdouble(z6-z9));
 
-			if(celula1 < numCelulas){
+			if(celula1 >=0 && celula1 < numCelulas){
 				histogramasNormalizados->sample[celula1].feat[bin1]+=w8;
 				histogramasNormalizados->sample[celula1].feat[bin2]+=w12;
 			}
-			if(celula2 < numCelulas){
+			if(celula2 >=0 && celula2 < numCelulas){
 				histogramasNormalizados->sample[celula2].feat[bin1]+=w9;
 				histogramasNormalizados->sample[celula2].feat[bin2]+=w13;
 			}
-			if(celula3 < numCelulas){
+			if(celula3 >=0 && celula3 < numCelulas){
 				histogramasNormalizados->sample[celula3].feat[bin1]+=w7;
 				histogramasNormalizados->sample[celula3].feat[bin2]+=w11;
 			}
-			if(celula4 < numCelulas){
+			if(celula4 >=0 && celula4 < numCelulas){
 				histogramasNormalizados->sample[celula4].feat[bin1]+=w10;
 				histogramasNormalizados->sample[celula4].feat[bin2]+=w14;
 			}
@@ -320,11 +361,10 @@ iftHistogram *thirdStep_histogram(iftImage *img, iftImage *g_mag, iftImage *g_or
 	}
 
 	// Concatenacao e normalizacao dos histogramas dentro dos blocos
-	int n3 = 6;
-	int m3 = 6;
 	int numBlocos = numCelulas/(n3*m3);
-	// Gambi02: jogando algumas celulas fora.
-	numCelulas = numBlocos*(n3*m3);
+	//// Gambi02: jogando algumas celulas fora.
+	//numCelulas = numBlocos*(n3*m3);
+
 	iftDataSet* histogramasConcatNormalizados = iftCreateDataSet(numBlocos, (n3*m3)*(n2*m2)*numBins);
 	for(int i=0; i<numBlocos; i++){
 		for(int j=0; j<(n3*m3)*(n2*m2)*numBins; j++){
@@ -336,10 +376,15 @@ iftHistogram *thirdStep_histogram(iftImage *img, iftImage *g_mag, iftImage *g_or
 	// Concatena
 	for(int i=0; i<numCelulas; i++){
 		int bloco = i/(n3*m3);
+		//int bloco = i/n3;
+		if(bloco >= numBlocos)
+			printf("Erro ao gerar os blocos!numCelulas=%d;numBlocos=%d;i=%d;n3=%d\n", numCelulas, numBlocos, i, n3);
 		for(int j=0; j<numBins; j++){
 			histogramasConcatNormalizados->sample[bloco].feat[i*numBins+j] += histogramasNormalizados->sample[i].feat[j];
 		}
 	}
+	iftDestroyDataSet(&histogramasNormalizados);
+	if(DEBUG_ON)
 	printf ("Primeira concatenação!\n");
 
 	// Normaliza
@@ -353,6 +398,7 @@ iftHistogram *thirdStep_histogram(iftImage *img, iftImage *g_mag, iftImage *g_or
 			histogramasConcatNormalizados->sample[i].feat[j] = histogramasConcatNormalizados->sample[i].feat[j] / meanGeo;
 		}
 	}
+	if(DEBUG_ON)
 	printf ("Segunda normalização!\n");
 
 	// Concatena tudo para ter o HoG
@@ -364,9 +410,67 @@ iftHistogram *thirdStep_histogram(iftImage *img, iftImage *g_mag, iftImage *g_or
 			hog->val[i*((n3*m3)*(n2*m2)*numBins) + j] = histogramasConcatNormalizados->sample[i].feat[j];
 		}
 	}
+	iftDestroyDataSet(&histogramasConcatNormalizados);
+	if(DEBUG_ON)
 	printf ("HoG gerado:%lf!\n", hisSum);
 
+	//if(!debugHistogramPrinted){
+	//	iftWriteHistogram(hog, "result/0009_hog.pgm");
+	//	debugHistogramPrinted = 1;
+	//}
+
 	return hog;
+}
+
+iftHistogram ***GenerateHoG(iftImage *img, iftImage *g_mag, iftImage *g_orient, int numCandidates, iftImage *candidates){
+	// Retorna, para cada candidato um vetor de caracteristicas por pixel.
+	// Ate onde eu entendi, usaremos o SVM para filtrar os pixeis de cada candidato e, hopefully, teremos apenas os pixeis da placa do candidato certo :)
+	printf("x:%d,y:%d\n", img->xsize, img->ysize);
+	int numMaxPixeisByCandidate = 20*60; // Provavelmente muito baixo!
+	// Aloca memoria
+	iftHistogram *** pixelBagCandidates = (iftHistogram ***)malloc(numCandidates * sizeof(iftHistogram **));
+	for(int i=0; i<numCandidates; i++){
+		pixelBagCandidates[i] = (iftHistogram **)malloc(numMaxPixeisByCandidate * sizeof(iftHistogram *));
+		for(int j=0; j<numMaxPixeisByCandidate; j++){
+			pixelBagCandidates[i][j] = NULL;
+		}
+	}
+
+	printf("Iniciando geração dos HoGs\n");
+	// Calcula os varios vetores de caracteristicas, os separando por candidatos
+	for(int x=0; x<candidates->xsize; x++){
+		printf("Iniciando geração de um HoG. x=%d\n", x);
+		getchar();
+		for(int y=0; y<candidates->ysize; y++){
+			int candidate = candidates->val[x*(candidates->ysize)+y];
+			if (candidate == 0){
+				continue;
+			} else if (candidate <= numCandidates){ // Ver se esse eh o padrao para identificar os candidatos mesmo.
+				int processed = 0;
+				candidate--;
+				for(int j=0; j<numMaxPixeisByCandidate; j++){
+					if(pixelBagCandidates[candidate][j] == NULL){
+						pixelBagCandidates[candidate][j] = thirdStep_histogram(img, g_mag, g_orient, x, y);
+						processed = 1;
+						break;
+					}
+				}
+				if(!processed){
+					printf("Número maximo de pixeis por candidato estourado!\n");
+				}
+			} else {
+				printf("Erro no padrão de detcção de candidatos!\n");
+			}
+		}
+	}
+
+	printf("Gerado HoG para %d candidatos!\n", numCandidates);
+
+	return pixelBagCandidates;
+}
+
+void freeBagOfHoGs(iftHistogram ***bag){
+	//TODO
 }
 
 int main() {
@@ -374,7 +478,7 @@ int main() {
     MemDinInicial = iftMemoryUsed();
 
 	iftImage *img = iftReadImageByExt("orig/0009.pgm");
-	
+
 	//iftImage *img_v1 = firstStep_normalize_v1(img);
 	//iftWriteImageP2(img_v1, "result/0009_v1_r8_L4095.pgm");
 	
@@ -391,6 +495,7 @@ int main() {
 
 	int numCandidates = iftMaximumValue(candidates);
 
+	/*
         // Select positive and negative examples
         for (int j = 0; j < numCandidates ; j++) {
 		char candidateName[100];
@@ -403,7 +508,9 @@ int main() {
 		hog = thirdStep_histogram(img, g_mag, g_orient, bb_img);
 		iftWriteHistogram(hog, "result/0009_hog.pgm");
 	}
-	
+	*/
+	iftHistogram ***bag = GenerateHoG(img, g_mag, g_orient, numCandidates, candidates);
+
     iftDestroyImage(&img);
     //iftDestroyImage(&img_v1);
 	iftDestroyImage(&img_v2);
@@ -413,4 +520,3 @@ int main() {
         printf("\n\nDinamic memory was not completely deallocated (%d, %d)\n",
                MemDinInicial, MemDinFinal);
 }
-
