@@ -17,7 +17,7 @@
 #define HOG_N3 2
 #define HOG_M3 2
 
-#define DEBUG_ON 0
+#define DEBUG_ON 1
 
 iftImage *firstStep_normalize_v1(iftImage *orig) {
 	iftAdjRel *adj = iftCircular(HOG_r_normalize);
@@ -216,8 +216,8 @@ iftFeatures *thirdStep_histogram_v2(iftImage *g_mag, iftImage *g_orient, int x0,
 			int y = j+y0;
 			int z = g_orient->val[x + y*g_mag->xsize];
 			
-			if(DEBUG_ON)
-				printf("x=%d, y=%d, p=%d, val=%d\n", x, y, x+y*g_mag->xsize, z);
+			//if(DEBUG_ON)
+				//printf("x=%d, y=%d, p=%d, val=%d\n", x, y, x+y*g_mag->xsize, z);
 	
 			int bin1;
 			if(g_mag->val[x + y*g_mag->xsize] == 0) {
@@ -267,8 +267,8 @@ iftFeatures *thirdStep_histogram_v2(iftImage *g_mag, iftImage *g_orient, int x0,
 			double w5 = w2*(y-y_q1q2)/HOG_M2;
 			double w6 = w2*(y_q3q4-y)/HOG_M2;
 			
-			if(DEBUG_ON)
-				printf("pesos: w=%.1f, w1=%.1f, w2=%.1f, w3=%.1f, w4=%.1f, w5=%.1f, w6=%.1f\n", w, w1, w2, w3, w4, w5, w6);
+			//if(DEBUG_ON)
+				//printf("pesos: w=%.1f, w1=%.1f, w2=%.1f, w3=%.1f, w4=%.1f, w5=%.1f, w6=%.1f\n", w, w1, w2, w3, w4, w5, w6);
 			
 			int dif_z = z2 - z;
 			if(dif_z < 0)
@@ -302,7 +302,7 @@ iftFeatures *thirdStep_histogram_v2(iftImage *g_mag, iftImage *g_orient, int x0,
 				histogramas[celula4]->val[bin1]+=w10;
 				histogramas[celula4]->val[bin2]+=w14;
 			}
-			
+			/*
 			if(DEBUG_ON) {
 				printf("x1x3=%d, x2x4=%d, y1y2=%d, y3y4=%d, z1=%d, z2=%d\n", x_q1q3, x_q2q4, y_q1q2, y_q3q4, z1, z2);
 				printf("células: %d %d %d %d\n", celula1, celula2, celula3, celula4);
@@ -313,10 +313,10 @@ iftFeatures *thirdStep_histogram_v2(iftImage *g_mag, iftImage *g_orient, int x0,
 					}
 					printf("\n");
 				}
-			}
+			}*/
 		}	
 	}	
-	if(DEBUG_ON) {
+	/*if(DEBUG_ON) {
 		for(int i=0; i<numCelulas; i++) {
 			printf("Histograma celula %d: ", i);
 			float s = 0;
@@ -326,7 +326,7 @@ iftFeatures *thirdStep_histogram_v2(iftImage *g_mag, iftImage *g_orient, int x0,
 			}
 			printf(" ===> s=%.1f\n", s);
 		}
-	}
+	}*/
 	
 	//Concatena
 	int numBlocos = (HOG_N1/HOG_N2-HOG_N3+1)*(HOG_M1/HOG_M2-HOG_M3+1);
@@ -350,25 +350,26 @@ iftFeatures *thirdStep_histogram_v2(iftImage *g_mag, iftImage *g_orient, int x0,
 		}
 	}
 	
-	if(DEBUG_ON) {
+	/*if(DEBUG_ON) {
 		for(int i=0; i<numBlocos; i++) {
 			printf("bloco %d %1.f- soma = %.1f\n", i, soma[i],sqrt(soma[i]));
 		}
-	}
+	}*/
 	
 	for(int i=0; i<numCelulas; i++) {
 		iftDestroyHistogram(&histogramas[i]);
 	}
 	free(histogramas);
+	
 	//Normaliza e obtém hog
-	iftFeatures* hog = iftCreateFeatures(numBlocos*HOG_N3*HOG_M3*numBins);
+	iftFeatures *hog = iftCreateFeatures(numBlocos*HOG_N3*HOG_M3*numBins);
 	for(int k=0; k<numBlocos; k++) {
 		for(int i=0; i<HOG_N3*HOG_M3*numBins; i++) {
 			hog->val[k*histogramasConcatNormalizados->nfeats + i] = 
 				histogramasConcatNormalizados->sample[k].feat[i]/(sqrt(soma[k]) + 0.000001);
 		}
 	}
-	free(soma);
+	free(soma);	
 	iftDestroyDataSet(&histogramasConcatNormalizados);
 	return hog;
 }
@@ -400,6 +401,7 @@ iftVoxel iftCreateBoundingBox2D(iftImage *label, int val, iftImage *img_mag, ift
     int bordaX = HOG_N1/2;
     int bordaY = HOG_M1/2;
 	
+	u = iftGetVoxelCoord(img_mag, minY*img_mag->xsize+minX);
 	minX = minX-bordaX;
     maxX = maxX+bordaX;
     minY = minY-bordaY;
@@ -429,7 +431,7 @@ iftVoxel iftCreateBoundingBox2D(iftImage *label, int val, iftImage *img_mag, ift
     (*out_mag) = bb_mag;
     (*out_orient) = bb_orient;
     
-    u = iftGetVoxelCoord(img_mag, minY*img_mag->xsize+minX);
+
 	return u;
 }
 

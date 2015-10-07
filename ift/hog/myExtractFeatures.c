@@ -24,6 +24,8 @@ int main(int argc, char *argv[]) {
 	int index_cand, numpixels_gt, numpixels_cand;
 	int num_candidates, total_candidates, descriptor_size;
 	iftVoxel orig_pixel;
+	timer *t1 = NULL, *t2 = NULL;
+	
 	
 	int MemDinInicial, MemDinFinal;
     MemDinInicial = iftMemoryUsed();
@@ -50,11 +52,14 @@ int main(int argc, char *argv[]) {
         total_candidates += calcula_qtd_descritores(cand_img, num_candidates);
         iftDestroyImage(&cand_img);
     }
+    printf("%d caractericas x %d descritores = %d \n", descriptor_size, total_candidates, descriptor_size*total_candidates);
+    
     dataset = iftCreateDataSet(total_candidates, descriptor_size);
     dataset->nclasses = 2;
 
     index_cand = 0;
     for (l = 0; l < gt_dir->nfiles ; l++) {
+		t1 = iftTic();
         // Read gt and candidate images
         gt_img = iftReadImageByExt(gt_dir->files[l]->pathname);
         cand_img = iftReadImageByExt(cand_dir->files[l]->pathname);
@@ -66,32 +71,31 @@ int main(int argc, char *argv[]) {
                 numpixels_gt++;
             }
         }
-
 		num_candidates = iftMaximumValue(cand_img);
 		
-		 /* -----------------------HOG------------------------------- */
+		 // -----------------------HOG------------------------------- //
 		iftImage *img_normalized = firstStep_normalize_v2(orig_img);
-		iftDestroyImage(&orig_img);
 		
 		iftImage *img_mag;
 		iftImage *img_orient;
 		secondStep_gradient_v2(img_normalized, &img_mag, &img_orient);
 		iftDestroyImage(&img_normalized);
 	 
-		iftImage **g_mag = malloc(sizeof(iftImage) * num_candidates); //ou sizeof(*iftImage) ou sizeof(iftImage*)
-		iftImage **g_orient = malloc(sizeof(iftImage) * num_candidates); 
+		iftImage **g_mag = malloc(sizeof(iftImage*) * num_candidates); 
+		iftImage **g_orient = malloc(sizeof(iftImage*) * num_candidates); 
 		iftVoxel *pixel_ref = malloc(sizeof(iftVoxel) * num_candidates);
-		
+		               
 		int qtd_descritores = 0;
         for (k = 0; k < num_candidates ; k++) {		
 			pixel_ref[k] = iftCreateBoundingBox2D(cand_img, (k+1), img_mag, img_orient, &g_mag[k], &g_orient[k]);
 			qtd_descritores += ((g_mag[k]->xsize - HOG_N1)*(g_mag[k]->ysize - HOG_M1));
 		}
-		iftDestroyImage(&cand_img);
 		iftDestroyImage(&img_mag);
 		iftDestroyImage(&img_orient);
 
 		for (k = 0; k < num_candidates ; k++) {		
+			printf("Imagem %d - candidato %d\n", l, k);
+			//printf("pixel referencia: (%d, %d) +x%d +y%d\n", pixel_ref[k].x, pixel_ref[k].y, g_mag[k]->xsize-HOG_N1, g_mag[k]->ysize-HOG_M1);
 			for(i=0; i < g_mag[k]->xsize-HOG_N1; i++) {
 				for(j=0; j<g_mag[k]->ysize-HOG_M1; j++) {
 					//Obtém vetor de características
@@ -101,7 +105,7 @@ int main(int argc, char *argv[]) {
 					}				
 					iftDestroyFeatures(&feat);
 					//Conta quantos pixel pertencem à placa
-					numpixels_cand = 0;
+					/*numpixels_cand = 0;
 					for(int x=0; x<HOG_N1; x++){
 						for(int y=0; y<HOG_M1; y++){
 							orig_pixel.x = pixel_ref[k].x + x;
@@ -111,15 +115,30 @@ int main(int argc, char *argv[]) {
 								numpixels_cand++;
 							}
 						}
-					}
-					if (numpixels_cand > (7*numpixels_gt/10)) {
-						dataset->sample[index_cand].truelabel = 1; // positive
+					}*/
+					orig_pixel.x = pixel_ref[k].x + i;
+					orig_pixel.y = pixel_ref[k].y + j;
+					origp = iftGetVoxelIndex(gt_img, orig_pixel); //ESTRANHOOOOOOOO NÃO FUNCIONAR!!!!
+					origp = orig_pixel.x + orig_pixel.y* gt_img->xsize;
+					if(origp > gt_img->n) {
+						printf("ERRO INDEXANDO IMAGEM\n Tamanho imagem %d x %d - ", gt_img->xsize, gt_img->ysize);
+						printf("pixel invalido (%d,%d) de índice %d\n", orig_pixel.x, orig_pixel.y, origp);
 					} else {
-						dataset->sample[index_cand].truelabel = 2; // negative
+						if (gt_img->val[origp] != 0) {
+							dataset->sample[index_cand].truelabel = 1; // positive
+						} else {
+							dataset->sample[index_cand].truelabel = 2; // negative
+						}
 					}
 					index_cand++;
+			
 				}
 			}
+		}
+		t2 = iftToc();
+		printf("imagem %d finalizada em %f\n\n", l, iftCompTime(t1, t2));
+		
+		for(k=0; k<num_candidates;k++) {
 			iftDestroyImage(&g_mag[k]);
 			iftDestroyImage(&g_orient[k]);
 		}
@@ -127,7 +146,9 @@ int main(int argc, char *argv[]) {
 		free(g_mag);
 		free(g_orient);
 		iftDestroyImage(&gt_img);
-	}
+		iftDestroyImage(&orig_img);
+		iftDestroyImage(&cand_img);
+	}  
 
     // Write candidates dataset
     iftWriteOPFDataSet(dataset, argv[4]);
