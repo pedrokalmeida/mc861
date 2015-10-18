@@ -6,8 +6,8 @@
 #define HOG_r_gradient 3.0
 
 // tamanho janela de detecção (em pixels)
-#define HOG_N1 108
-#define HOG_M1 48
+#define HOG_N1 120
+#define HOG_M1 60
 
 // tamanho célula (em pixels)
 #define HOG_N2 12
@@ -49,6 +49,10 @@ iftImage *firstStep_normalize_v2(iftImage *orig) {
     }
 	iftDestroyAdjRel(&adj);
     return img_normalized;
+}
+
+iftImage *normalize(iftImage *orig) {
+	return firstStep_normalize_v2(orig);
 }
 
 iftImage *secondStep_gradient_v1(iftImage *img) {	
@@ -126,8 +130,12 @@ void secondStep_gradient_v2(iftImage *img, iftImage **g_mag, iftImage **g_orient
 	*g_orient = img_orient;
 }
 
+void gradient(iftImage *img, iftImage **g_mag, iftImage **g_orient) {
+	secondStep_gradient_v2(img, g_mag, g_orient);
+}
+
 void celulas_adjacentes(int i, int j, int *celula1, int *celula2, int *celula3, int *celula4) {
-		int celula =  i/HOG_N2 + (j/HOG_N2)*(HOG_N1/HOG_N2);
+	int celula =  i/HOG_N2 + (j/HOG_N2)*(HOG_N1/HOG_N2);
 	int x_centro = ((celula % (HOG_N1/HOG_N2)) * HOG_N2 + HOG_N2/2);
 	int y_centro = ((celula /(HOG_N1/HOG_N2)) * HOG_M2 + HOG_M2/2);
 	if(i < x_centro) {
@@ -137,6 +145,8 @@ void celulas_adjacentes(int i, int j, int *celula1, int *celula2, int *celula3, 
 			(*celula2) = (*celula4) - (HOG_N1/HOG_N2);
 			(*celula1) = (*celula2) - 1;
 
+			if(((*celula2) % (HOG_N1/HOG_N2)) == 0)
+				(*celula1) = -1;
 			if(((*celula4) % (HOG_N1/HOG_N2)) == 0)
 				(*celula3) = -1;
 
@@ -195,7 +205,7 @@ int coordenada_centro_eixoy(int celulaA, int celulaB) {
 	return ((celulaA /(HOG_N1/HOG_N2)) * HOG_M2 + HOG_M2/2);
 }
 
-iftFeatures *thirdStep_histogram_v2(iftImage *g_mag, iftImage *g_orient, int x0, int y0) {
+iftFeatures *thirdStep_histogram(iftImage *g_mag, iftImage *g_orient, int x0, int y0) {
 	// Gera um histograma por célula, considerando 9 orientações(=bins)
 	int numCelulas = (HOG_N1*HOG_M1)/(HOG_N2*HOG_M2);
 	int numBins = 9;
@@ -214,6 +224,11 @@ iftFeatures *thirdStep_histogram_v2(iftImage *g_mag, iftImage *g_orient, int x0,
 		for(int j=0; j<HOG_M1; j++){
 			int x = i+x0;
 			int y = j+y0;
+			
+			iftVoxel v = iftGetVoxelCoord(g_mag, x + y*g_mag->xsize);
+			if(!iftValidVoxel(g_mag, v)) {
+				continue;
+			}
 			int z = g_orient->val[x + y*g_mag->xsize];
 			
 			//if(DEBUG_ON)
@@ -372,6 +387,37 @@ iftFeatures *thirdStep_histogram_v2(iftImage *g_mag, iftImage *g_orient, int x0,
 	free(soma);	
 	iftDestroyDataSet(&histogramasConcatNormalizados);
 	return hog;
+}
+
+iftFeatures *hog(iftImage *g_mag, iftImage *g_orient, int x, int y) {
+	
+	int x0 = x - HOG_N1/2;
+	int xn = x0 + HOG_N1;
+	int y0 = y - HOG_M1/2;
+	int yn = y0 + HOG_M1;
+	
+	//if(x0 >= 0 && xn < g_mag->xsize && y0 >= 0 && yn < g_mag->ysize)
+		return thirdStep_histogram(g_mag, g_orient, x0, y0); 
+	
+	int numBlocos = (HOG_N1/HOG_N2-HOG_N3+1)*(HOG_M1/HOG_M2-HOG_M3+1);
+	iftFeatures *hog_zero = iftCreateFeatures(numBlocos*HOG_N3*HOG_M3*9);
+	for(int i=0; i<hog_zero->n; i++) {
+		hog_zero->val[i] = 0.0;
+	}
+	return hog_zero;
+}
+
+int countNumPixelsCandidates(iftImage *candImg) {
+	int num = 0;
+	for(int i=0; i<candImg->xsize; i+=3) {
+	for(int j=0; j<candImg->ysize; j+=3) {
+		int p = i + j*candImg->xsize;
+	//for (int p = 0; p < candImg->n; ++p) {
+        if (candImg->val[p] > 0) {
+            num++;
+		}
+    }}
+    return num;	
 }
 
 iftVoxel iftCreateBoundingBox2D(iftImage *label, int val, iftImage *img_mag, iftImage *img_orient, iftImage **out_mag, iftImage **out_orient) {
