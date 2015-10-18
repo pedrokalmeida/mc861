@@ -1,0 +1,5 @@
+../../images/train/orig
+../../images/train/label
+../../images/train/cand
+../../data.opf
+

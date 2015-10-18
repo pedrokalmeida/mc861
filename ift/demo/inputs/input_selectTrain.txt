@@ -1,0 +1,3 @@
+../../images/train/orig
+../../images/train/cand
+
