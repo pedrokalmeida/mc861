@@ -17,6 +17,8 @@
 #define HOG_N3 2
 #define HOG_M3 2
 
+#define INTERVALO 3
+
 #define DEBUG_ON 1
 
 iftImage *firstStep_normalize_v1(iftImage *orig) {
@@ -409,8 +411,8 @@ iftFeatures *hog(iftImage *g_mag, iftImage *g_orient, int x, int y) {
 
 int countNumPixelsCandidates(iftImage *candImg) {
 	int num = 0;
-	for(int i=0; i<candImg->xsize; i+=3) {
-	for(int j=0; j<candImg->ysize; j+=3) {
+	for(int i=0; i<candImg->xsize; i+=INTERVALO) {
+	for(int j=0; j<candImg->ysize; j+=INTERVALO) {
 		int p = i + j*candImg->xsize;
 	//for (int p = 0; p < candImg->n; ++p) {
         if (candImg->val[p] > 0) {

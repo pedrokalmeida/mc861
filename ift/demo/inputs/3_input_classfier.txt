@@ -1,4 +1,3 @@
-iftDesignClassifier:
 ../../data.opf
 ../../svm
 

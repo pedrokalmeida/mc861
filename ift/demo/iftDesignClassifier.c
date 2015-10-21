@@ -5,14 +5,16 @@
 
 int main(int argc, char * argv[]) {
 
-    if(argc<3) {
-        iftError("Usage: <training dataset> <best classifier>", argv[0]);
-    }
+	char dataset[100], classifier[100];
+	printf("please input: \t<training dataset>\n\t\t<<best classifier>\n");
+	scanf("%s", dataset);
+	scanf("%s", classifier);
 
+	
     float bestAcc = 0.0f;
     float acc;
 
-    iftDataSet* Z = iftReadOPFDataSet(argv[1]);
+    iftDataSet* Z = iftReadOPFDataSet(dataset);
 
     for (int i = 0; i < NRUNS; ++i) {
 
@@ -28,7 +30,7 @@ int main(int argc, char * argv[]) {
 
         if(acc > bestAcc) {
             bestAcc = acc;
-            iftWriteSVM(svm, argv[2]);
+            iftWriteSVM(svm, classifier);
         }
 
         iftDestroySVM(svm);

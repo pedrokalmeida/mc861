@@ -1,6 +1,19 @@
 #include "ift.h"
 #include "hog.h"
 
+int countNumPixelsCandidatesTotal(iftImage *candImg) {
+	int num = 0;
+	for(int i=0; i<candImg->xsize; i+=1) {
+	for(int j=0; j<candImg->ysize; j+=1) {
+		int p = i + j*candImg->xsize;
+	//for (int p = 0; p < candImg->n; ++p) {
+        if (candImg->val[p] > 0) {
+            num++;
+		}
+    }}
+    return num;	
+}
+
 int main(int argc, char* argv []) {
 
 	char inputPath[100], labelPath[100], candPath[100], classifierPath[100], outputPath[100];
@@ -14,14 +27,14 @@ int main(int argc, char* argv []) {
 	
 	int MemDinInicial, MemDinFinal;
     MemDinInicial = iftMemoryUsed();
-    
+        
     iftSVM* svm = iftReadSVM(classifierPath);
-
+	
     iftDir* imgsDir = iftLoadFilesFromDirectory(inputPath, "pgm");
     iftDir* labelsDir = iftLoadFilesFromDirectory(labelPath, "pgm");
 	iftDir* candsDir = iftLoadFilesFromDirectory(candPath, "pgm");
-    
-    if(imgsDir->nfiles!=labelsDir->nfiles ||imgsDir->nfiles!=candsDir->nfiles) {
+	
+	if(imgsDir->nfiles!=labelsDir->nfiles ||imgsDir->nfiles!=candsDir->nfiles) {
         iftError("Different number of images and/or labels and/or candidates.", argv[0]);
     }
 
@@ -36,9 +49,10 @@ int main(int argc, char* argv []) {
     iftDataSet* Zt;
 
     float meanAcc = 0.0f;
-
-	int DESCRIPTOR_SIZE = (HOG_N1/HOG_N2-HOG_N3+1)*(HOG_M1/HOG_M2-HOG_M3+1)*HOG_N3*HOG_M3*9;
+	float minAcc = 100.0;
 	
+	int DESCRIPTOR_SIZE = (HOG_N1/HOG_N2-HOG_N3+1)*(HOG_M1/HOG_M2-HOG_M3+1)*HOG_N3*HOG_M3*9;
+
     for (int i = 0; i <imgsDir->nfiles; ++i) {
 
         printf("Image: %s ", imgsDir->files[i]->pathname);
@@ -50,7 +64,7 @@ int main(int argc, char* argv []) {
         normImg = normalize(origImg);
         gradient(normImg, &magImg, &orientImg);
 
-        int numCandidates = countNumPixelsCandidates(candImg);
+        int numCandidates = countNumPixelsCandidatesTotal(candImg);
         Zt = iftCreateDataSet(numCandidates, DESCRIPTOR_SIZE);
         iftSetStatus(Zt, TEST);
 
@@ -71,7 +85,7 @@ int main(int argc, char* argv []) {
         iftSVMClassifyOVO(svm, Zt, TEST);
 
         float acc = 0.0f;
-        int numPixels = 0;
+        int numPixels = 0, numPixelsOut = 0, accNo = 0;
         
         j=0;
         for (int p = 0; p < candImg->n; ++p) {
@@ -79,7 +93,10 @@ int main(int argc, char* argv []) {
 				if(Zt->sample[j].label == 1) {					
 					if (labelImg->val[p] > 0) {
 						acc+=1.0;
+					} else {
+						accNo++;
 					}
+					numPixelsOut++;
 				} else {
 					origImg->val[p] = 0;
 				}
@@ -92,7 +109,15 @@ int main(int argc, char* argv []) {
                 numPixels++;
             }
         }
+        
 
+		acc/= numPixels;
+		if(acc <  minAcc) 
+			minAcc = acc;
+        printf("Detection precision: %4.2f - %4.2f\n", acc, (float)accNo/numPixelsOut);
+
+        meanAcc += acc/imgsDir->nfiles;
+        
         char* detectedfile = iftJoinPathnames(outputPath, iftBasename(imgsDir->files[i]->pathname));
 
         iftWriteImageP5(origImg, detectedfile);
@@ -104,13 +129,6 @@ int main(int argc, char* argv []) {
 		iftDestroyImage(&normImg);
         iftDestroyImage(&magImg);
         iftDestroyImage(&orientImg);
-        
-        acc/= numPixels;
-
-        printf("Detection precision: %4.2f\n", acc);
-
-        meanAcc += acc/imgsDir->nfiles;
-
     }
 
 	iftDestroyDir(&imgsDir);
@@ -118,6 +136,7 @@ int main(int argc, char* argv []) {
     iftDestroySVM(svm);
 
     printf("\n\nMean Detection Precision: %4.2f\n", meanAcc);
+    printf("%4.2f\n", minAcc);
     
     MemDinFinal = iftMemoryUsed();
     if (MemDinInicial!=MemDinFinal)

@@ -78,8 +78,8 @@ int main(int argc, char *argv[]) {
 		iftDestroyImage(&img_normalized);
 		
 		//for (int p = 0; p < gt_img->n ; p++) {
-		for(int i=0; i<gt_img->xsize; i+=3) {
-		for(int j=0; j<gt_img->ysize; j+=3) {
+		for(int i=0; i<gt_img->xsize; i+=INTERVALO) {
+		for(int j=0; j<gt_img->ysize; j+=INTERVALO) {
 			int p = i + j*gt_img->xsize;
 			if (cand_img->val[p] != 0) {
 				orig_pixel = iftGetVoxelCoord(cand_img, p);
@@ -94,11 +94,11 @@ int main(int argc, char *argv[]) {
 				int y0 = orig_pixel.y - HOG_M1/2;
 				int yn = y0 + HOG_M1;
 				/*if(x0 <= min_x && xn >= max_x && y0 <= min_y && yn >= max_y) {
-					//if(gt_img->val[p] != 0) {
+					if(gt_img->val[p] != 0) {
 						dataset->sample[index_cand].truelabel = 1;
-					//} else {
-					//	dataset->sample[index_cand].truelabel = 2;
-					//}
+					} else {
+						dataset->sample[index_cand].truelabel = 2;
+					}
 				} else {
 					dataset->sample[index_cand].truelabel = 2;
 				}*/

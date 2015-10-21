@@ -1,0 +1,4 @@
+1. mySelectCandidates - gerar os candidatos de cada imagem como imagens de saida
+2. myExtractFeatures - gerar os hogs de cada candidato de cada imagem dentro de um dataset de saida.
+3. iftDesignClassifier - gerar o classificador a partir do dataset gerado e o salva como saida.
+4. myDetectPlate - detecta as placas das imagens de teste a partir do classificador.
