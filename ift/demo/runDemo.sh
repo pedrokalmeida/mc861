@@ -1,14 +1,20 @@
+# Builds everything
 make mySelectCandidates
 make myExtractFeatures
 make iftDesignClassifier
 make myDetectPlate
 
-../bin/mySelectCandidates ../../images/train/orig ../../images/train/cand
+# Gera as imagens candidatas para o conjunto de treino.
+../bin/mySelectCandidates < inputs/1_input_selectTrain.txt
 
-../bin/mySelectCandidates ../../images/test/orig ../../images/test/cand
+# Gera as imagens candidatas para o conjunto de teste.
+../bin/mySelectCandidates < inputs/4_input_selectTest.txt
 
-../bin/myExtractFeatures ../../images/train/orig ../../images/train/label ../../images/train/cand ../../data.opf
+# Gera os vetores de caracteristicas para as imagens de treino.
+../bin/myExtractFeatures < inputs/2_input_features.txt
 
-../bin/iftDesignClassifier ../../data.opf ../../svm
+# Gera o classificador.
+../bin/iftDesignClassifier < inputs/3_input_classfier.txt
 
-../bin/myDetectPlate ../../images/test/orig ../../images/test/label ../../images/test/cand ../../svm ../../images/test/output
+# Usa o classificador nas imagens de teste e calcula a precisão! o/
+../bin/myDetectPlate < inputs/5_input_detect.txt
