@@ -72,17 +72,17 @@ int main(int argc, char* argv []) {
             }
         }
 
+/*
          iftImage *aux;
          aux = outputImg;
          outputImg = selectCandidates(outputImg);
          iftDestroyImage(&aux);
+*/
 
-/*        //coordenadas definindo caixa contendo pixels identificados como placa
+        //coordenadas definindo caixa contendo pixels identificados como placa
         int min_x = INFINITY_INT, max_x = 0, min_y = INFINITY_INT, max_y = 0;
-        int MIN_X = INFINITY_INT, MAX_X = 0, MIN_Y = INFINITY_INT, MAX_Y = 0;
         int min_x_label = INFINITY_INT, max_x_label = 0, min_y_label = INFINITY_INT, max_y_label = 0;
         iftVoxel orig_pixel;
-        iftAdjRel *adj = iftCircular(5.0);
         for (int p = 0; p < outputImg->n ; p++) {
             if (outputImg->val[p] != 0) {                
                 orig_pixel = iftGetVoxelCoord(outputImg, p);
@@ -110,8 +110,8 @@ int main(int argc, char* argv []) {
             }
         }    
         
-        min_x -= 5;
-        max_x += 5;
+        //min_x -= 5;
+        //max_x += 5;
         min_y -= 5;
         max_y += 5;
         
@@ -138,22 +138,10 @@ int main(int argc, char* argv []) {
                     pixelOut+=1.0;
             }
         }}
-*/
 
-        float acc = 0;
-        float pixelOut = 0;
-        for(int p=0; p < origImg->n; p++) {
-            if(outputImg->val[p] != 0)
-               outputImg->val[p] = origImg->val[p];
-            if(labelImg->val[p] > 0) 
-                acc+= 1.0;
-        }
         acc /= numPixelsPlate;
-
-        //float acc_region = (float)pixelOut/((max_x-min_x)*(max_y-min_y));
-        //printf("Detection precision: %4.2f - %4.2f\n", acc, acc_region);
-        printf("Detection precision: %4.2f\n", acc);
-
+        float acc_region = (float)pixelOut/((max_x-min_x)*(max_y-min_y));
+        printf("Detection precision: %4.2f - %4.2f\n", acc, acc_region);
            if(acc <  minAcc) 
             minAcc = acc;
 
