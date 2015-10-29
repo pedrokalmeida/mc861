@@ -87,23 +87,22 @@ int main(int argc, char* argv []) {
         iftSVMClassifyOVO(svm, Zt, TEST);
 
         float acc = 0.0f;
-        int numPixels = 0, numPixelsOut = 0, accNo = 0;
+        int numPixelsPlate = 0, numPixels = 0, accNo = 0;
         
-         maskImg = iftCopyImage(origImg);
+        maskImg = iftCopyImage(origImg);
 
+		
         j=0;
         for (int p = 0; p < candImg->n; ++p) {
 			if(candImg->val[p] > 0) {
-				if(Zt->sample[j].label == 1) {					
+				if(Zt->sample[j].label == 1) {	
+					maskImg->val[p] = origImg->val[p] + 1;				
 					if (labelImg->val[p] > 0) {
-						//acc+=1.0;
-                  continue;
+						acc+=1.0;
 					} else {
-						//accNo++;
-                  continue;
+						accNo++;
 					}
-					//numPixelsOut++;
-               continue;
+					numPixels++;
 				} else {
 					maskImg->val[p] = 0;
 				}
@@ -112,50 +111,23 @@ int main(int argc, char* argv []) {
 				maskImg->val[p] = 0;
 			}
 			
-			/*if (labelImg->val[p] > 0) {
-                numPixels++;
-            }*/
-        }
-
-         maskImg = selectCandidates(maskImg);
-
-        j=0;
-        for (int p = 0; p < candImg->n; ++p) {
-			if(candImg->val[p] > 0) {
-				if(maskImg->val[p] >= 1) {					
-					if (labelImg->val[p] > 0) {
-						acc+=1.0;
-					} else {
-						accNo++;
-					}
-					numPixelsOut++;
-				} else {
-					origImg->val[p] = 0;
-               continue;
-				}
-				j++;
-			} else {
-				origImg->val[p] = 0;
-            continue;
-			}
-			
 			if (labelImg->val[p] > 0) {
-                numPixels++;
+                numPixelsPlate++;
             }
         }
-        
-
-		acc/= numPixels;
+		
+		acc/= numPixelsPlate;
 		if(acc <  minAcc) 
 			minAcc = acc;
-        printf("Detection precision: %4.2f - %4.2f\n", acc, (float)accNo/numPixelsOut);
+        printf("Detection precision: %4.2f - %4.2f\n", acc, (float)accNo/numPixels);
 
         meanAcc += acc/imgsDir->nfiles;
         
         char* detectedfile = iftJoinPathnames(outputPath, iftBasename(imgsDir->files[i]->pathname));
 
-        iftWriteImageP5(origImg, detectedfile);
-
+//        iftWriteImageP5(origImg, detectedfile);
+		iftWriteImageP5(maskImg, detectedfile);
+       
         iftDestroyDataSet(&Zt);
         iftDestroyImage(&candImg);
         iftDestroyImage(&origImg);
