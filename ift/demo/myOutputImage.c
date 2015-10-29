@@ -79,6 +79,22 @@ int main(int argc, char* argv []) {
          iftDestroyImage(&aux);
 */
 
+         
+         // Threshold
+         iftImage *thresh = iftCopyImage(outputImg);
+         for (int p = 0; p < thresh->n; ++p) {
+            if(thresh->val[p] > 0){
+               thresh->val[p] = 255;
+            }
+         }
+
+         iftAdjRel *A = iftCircular(5.0);
+         iftDestroyImage(&outputImg);
+         outputImg = iftFastLabelComp(thresh, A);
+         iftDestroyImage(&thresh);
+
+         iftRemoveSmallComponents(outputImg, MIN_VOLUME);
+
         //coordenadas definindo caixa contendo pixels identificados como placa
         int min_x = INFINITY_INT, max_x = 0, min_y = INFINITY_INT, max_y = 0;
         int min_x_label = INFINITY_INT, max_x_label = 0, min_y_label = INFINITY_INT, max_y_label = 0;
@@ -146,9 +162,9 @@ int main(int argc, char* argv []) {
             minAcc = acc;
 
         meanAcc += acc;
-        //meanAccRegion += acc_region;
+        meanAccRegion += acc_region;
 
-        if (acc < 0.7)
+        if (acc < 0.65)
             falhas++;
         char* detectedfile = iftJoinPathnames(outputPath, iftBasename(imgsDir->files[i]->pathname));
 
@@ -162,8 +178,8 @@ int main(int argc, char* argv []) {
         iftDestroyImage(&inputImg);
     }
     
-    //printf("\n\nMean Detection Precision: %4.2f - %4.2f\n", (float)meanAcc/imgsDir->nfiles, (float)meanAccRegion/imgsDir->nfiles);
-    printf("\n\nMean Detection Precision: %4.2f\n", (float)meanAcc/imgsDir->nfiles);
+    printf("\n\nMean Detection Precision: %4.2f - %4.2f\n", (float)meanAcc/imgsDir->nfiles, (float)meanAccRegion/imgsDir->nfiles);
+    //printf("\n\nMean Detection Precision: %4.2f\n", (float)meanAcc/imgsDir->nfiles);
     printf("%4.2f\n", minAcc);
     printf("%d placas não detectadas\n", falhas);
 
