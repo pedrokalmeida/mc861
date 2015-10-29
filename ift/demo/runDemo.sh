@@ -3,6 +3,7 @@ make mySelectCandidates
 make myExtractFeatures
 make iftDesignClassifier
 make myDetectPlate
+make myOutputImage
 
 # Gera as imagens candidatas para o conjunto de treino.
 ../bin/mySelectCandidates < inputs/1_input_selectTrain.txt
@@ -18,3 +19,6 @@ make myDetectPlate
 
 # Usa o classificador nas imagens de teste e calcula a precisão! o/
 ../bin/myDetectPlate < inputs/5_input_detect.txt
+
+# Corrige as imagens geradas, removendo candidatos a mais e preenchendo buracos.
+../bin/myOutputImage < inputs/input_correctPlate.txt

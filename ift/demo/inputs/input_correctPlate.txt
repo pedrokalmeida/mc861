@@ -1,0 +1,5 @@
+../../images/test/orig
+../../images/test/output
+../../images/test/label
+../../images/test/cand
+../../images/test/output_box
