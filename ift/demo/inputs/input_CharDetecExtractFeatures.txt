@@ -1,0 +1,4 @@
+../../DetectedLicensePlates/gray-digits.20x16.0.0
+../../DetectedLicensePlates/gray-letters.20x16.0.0
+../../dataDigitsAndLetters.opf
+

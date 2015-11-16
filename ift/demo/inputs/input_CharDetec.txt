@@ -1,0 +1,9 @@
+../../svmDigitsAndLetters
+../../testPlate/e.pgm
+../../testPlate/w.pgm
+../../testPlate/l.pgm
+../../testPlate/2.pgm
+../../testPlate/2.pgm
+../../testPlate/0.pgm
+../../testPlate/4.pgm
+
