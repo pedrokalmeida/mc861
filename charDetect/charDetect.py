@@ -7,6 +7,9 @@ from sklearn import svm
 import sklearn.preprocessing as skpre
 from sklearn.neighbors import KNeighborsClassifier
 import sklearn.decomposition as deco
+from sklearn.cross_validation import train_test_split
+from sklearn.naive_bayes import BernoulliNB
+from scipy.spatial.distance import cosine
 
 digitsPath = "./gray-digits.20x16.0.0/"
 lettersPath = "./gray-letters.20x16.0.0/"
@@ -60,7 +63,7 @@ def getImagesFromDir (imageDir):
 	return [images, imagesCategory]
 
 def computeSVM(trainData, testData):
-   classifier = svm.SVC(gamma=10)
+   classifier = svm.SVC(gamma=0.002)
 
    classifier.fit(trainData[0], trainData[1])
    preds = classifier.predict(testData[0])
@@ -75,8 +78,6 @@ def computeKnn (trainData, testData):
 		neigh = KNeighborsClassifier(n_neighbors=n)
 		neigh.fit(trainData[0], trainData[1])
 		preds = neigh.predict(testData[0])
-		import collections
-		print collections.Counter(preds)
 		accuracy = np.where(preds==testData[1], 1, 0).sum() / float(len(testData[0]))
 		print "Neighbors: %d, Accuracy: %3f" % (n, accuracy)
 		resultsK.append(n)
@@ -98,6 +99,85 @@ def computePCA(data):
 	
 	return deco.PCA(n_components=dim).fit(data)
 
+def get_score(expected, predictions):
+	result = 0
+	for i in range(len(predictions)):
+		if predictions[i] == expected[i]:
+			result += 1
+	return result/float(len(expected))
+
+def holdOutCross(dataTrain, dataTest, trainFunc, testMethod, hipergrid):
+	best_score = -1
+	for H in hipergrid:
+		trained = trainFunc(dataTrain, H)
+		score = testMethod(trained, dataTest)
+		if score > best_score:
+			best_score = score
+			bestHiper = H
+	return bestHiper
+
+def trainFuncBNB(trainData, hiper):
+	bnb = BernoulliNB(alpha=hiper)
+	bnb.fit(trainData[0], trainData[1])
+	return bnb
+
+def testFuncBNB(trained, testData):
+	predictions = trained.predict(testData[0])
+	return get_score(testData[1], predictions)
+
+def frange(x, y, jump):
+	while x < y:
+		yield x
+		x += jump
+
+def hipergridBNB(a, b, pace):
+	for alpha in frange(a, b, pace):
+		yield alpha
+
+def computeBNB(trainData, testData):
+	bestHiperBNB = holdOutCross(trainData, testData, trainFuncBNB, testFuncBNB, hipergridBNB(1e-6, 1e0, 0.01))
+	
+	trained = trainFuncBNB(trainData, bestHiperBNB)
+	score = testFuncBNB(trained, testData)
+	print "BNB accuracy: %3f" % (score)
+
+def trainFuncSVMRBF(trainData, hiper):
+	svc = svm.SVC(kernel='rbf', C=hiper[0], gamma=hiper[1])
+	svc.fit(trainData[0], trainData[1])
+	return svc
+
+def testFuncSVMRBF(trained, testData):
+	predictions = trained.predict(testData[0])
+	return get_score(testData[1], predictions)
+
+def hipergridSVMRBF(a, b, pace):
+	for c in frange(a, b, pace):
+		for gama in frange(a, b, pace):
+			yield [c, gama]
+
+def computeSVMRBF(trainData, testData):
+	bestHiperRBFOVO = holdOutCross(trainData, testData, trainFuncSVMRBF, testFuncSVMRBF, hipergridSVMRBF(1e-3, 1e4, 1000))
+	
+	trained = trainFuncSVMRBF(trainData, bestHiperRBFOVO)
+	score = testFuncSVMRBF(trained, testData)
+	print "SVMRBF accuracy: %3f" % (score)
+
+def trainFuncKNN(trainData, hiper):
+	knn = KNeighborsClassifier(n_neighbors=hiper, metric=cosine)
+	knn.fit(trainData[0], trainData[1])
+	return knn
+
+def testFuncKNN(trained, testData):
+	predictions = trained.predict(testData[0])
+	return get_score(testData[1], predictions)
+
+def computeKNN(trainData, testData):
+	bestKIDF = holdOutCross(trainData, testData, trainFuncKNN, testFuncKNN, range(1, 17, 2))
+	
+	trained = trainFuncKNN(trainData, bestKIDF)
+	score = testFuncKNN(trained, testData)
+	print "KNN accuracy: %3f" % (score)
+
 def getImages():
    digitsImages = getImagesFromDir(digitsPath)
    lettersImages = getImagesFromDir(lettersPath)
@@ -110,29 +190,13 @@ def getImages():
    index = range(len(images[0]))
    normalizedImages = skpre.scale(images[0])
    # Divide em teste e treino.
-   shuffle(index)
-   imageVectors = []
-   imageCategory = []
-   for i in index:
-      imageVectors.append(normalizedImages[i])
-      imageCategory.append(images[1][i])
-
-   imagesTest = [
-         imageVectors[:len(imageVectors)/2],
-         imageCategory[len(imageCategory)/2:]
-      ]
-
-   imagesTrain = [
-         imageVectors[:len(imageVectors)/2],
-         imageCategory[len(imageCategory)/2:]
-      ]
-
    # Calcula PCA - Reducao de dimensionalidade dos dados. :)
-   pca = computePCA(imagesTrain[0])
-   transformedTrainData = pca.transform(imagesTrain[0])
-   transformedTestData = pca.transform(imagesTest[0])
+   pca = computePCA(normalizedImages)
+   transformedData = pca.transform(normalizedImages)
 
-   return [[transformedTrainData, imagesTrain[1]], [transformedTrainData, imagesTrain[1]]]
+   trainDataTF, testDataTF, classesTrainTF, classesTestTF = train_test_split(transformedData, images[1], train_size=0.65)
+   
+   return [[trainDataTF, classesTrainTF], [testDataTF, classesTestTF]]
 
 
 def main():
@@ -141,8 +205,11 @@ def main():
 
    #results = computeKnn (digitsImages, digitsImages)[0]
    images = getImages()
-   #results = computeKnn (images[0], images[1])[0]
-   computeSVM(images[0], images[1])
+   #results = computeKnn (images[0], images[1])[0]#old
+   #computeSVM(images[0], images[1])#SVM accuracy: 0.670404
+   #computeBNB(images[0], images[1])#BNB accuracy: 0.454036
+   #computeSVMRBF(images[0], images[1])#SVMRBF accuracy: 0.780269
+   #computeKNN(images[0], images[1]) #KNN accuracy: 0.757848
    print "Encerrando"
 
 
