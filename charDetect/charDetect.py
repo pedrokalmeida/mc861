@@ -62,28 +62,6 @@ def getImagesFromDir (imageDir):
 			imagesCategory.append(getImageCategory(imageDir, image))
 	return [images, imagesCategory]
 
-def computeSVM(trainData, testData):
-   classifier = svm.SVC(gamma=0.002)
-
-   classifier.fit(trainData[0], trainData[1])
-   preds = classifier.predict(testData[0])
-   accuracy = np.where(preds==testData[1], 1, 0).sum() / float(len(testData[0]))
-   print "SVM accuracy: %3f" % (accuracy)
-
-
-def computeKnn (trainData, testData):
-	resultsK = []
-	resultsAc = []
-	for n in [1, 3, 5, 11, 17, 21]:
-		neigh = KNeighborsClassifier(n_neighbors=n)
-		neigh.fit(trainData[0], trainData[1])
-		preds = neigh.predict(testData[0])
-		accuracy = np.where(preds==testData[1], 1, 0).sum() / float(len(testData[0]))
-		print "Neighbors: %d, Accuracy: %3f" % (n, accuracy)
-		resultsK.append(n)
-		resultsAc.append(accuracy)
-	return [[resultsK, resultsAc], neigh]
-
 # Calcula o pca dos dados.
 def computePCA(data):
 	pca = deco.PCA()
@@ -179,39 +157,40 @@ def computeKNN(trainData, testData):
 	print "KNN accuracy: %3f" % (score)
 
 def getImages():
-   digitsImages = getImagesFromDir(digitsPath)
-   lettersImages = getImagesFromDir(lettersPath)
+   digitsImagesNormalized = getImagesFromDir(digitsPath)
+   lettersImagesNormalized = getImagesFromDir(lettersPath)
 
-   images = [
-      digitsImages[0] + lettersImages[0],
-      digitsImages[1] + lettersImages[1]
-      ]
+   digitsImagesNormalized = [skpre.scale(digitsImagesNormalized[0]), digitsImagesNormalized[1]]
+   lettersImagesNormalized = [skpre.scale(lettersImagesNormalized[0]), lettersImagesNormalized[1]]
 
-   index = range(len(images[0]))
-   normalizedImages = skpre.scale(images[0])
+   allImages = []
+   for i in digitsImagesNormalized[0]:
+      allImages.append(i)
+
+   for i in lettersImagesNormalized[0]:
+      allImages.append(i)
+
    # Divide em teste e treino.
    # Calcula PCA - Reducao de dimensionalidade dos dados. :)
-   pca = computePCA(normalizedImages)
-   transformedData = pca.transform(normalizedImages)
+   pca = computePCA(allImages)
+   digitstransformedData = pca.transform(digitsImagesNormalized[0])
+   letterstransformedData = pca.transform(lettersImagesNormalized[0])
 
-   trainDataTF, testDataTF, classesTrainTF, classesTestTF = train_test_split(transformedData, images[1], train_size=0.65)
+   dtrainDataTF, dtestDataTF, dclassesTrainTF, dclassesTestTF = train_test_split(digitstransformedData, digitsImagesNormalized[1], train_size=0.65)
+
+   ltrainDataTF, ltestDataTF, lclassesTrainTF, lclassesTestTF = train_test_split(letterstransformedData, lettersImagesNormalized[1], train_size=0.65)
    
-   return [[trainDataTF, classesTrainTF], [testDataTF, classesTestTF]]
-
+   return [[dtrainDataTF, dclassesTrainTF], [dtestDataTF, dclassesTestTF]], [[ltrainDataTF, lclassesTrainTF], [ltestDataTF, lclassesTestTF]]
 
 def main():
-   #digitsImages = getImagesFromDir(digitsPath)
-   #print digitsImages[0][0], digitsImages[1][0]
-
-   #results = computeKnn (digitsImages, digitsImages)[0]
-   images = getImages()
-   #results = computeKnn (images[0], images[1])[0]#old
-   #computeSVM(images[0], images[1])#SVM accuracy: 0.670404
-   #computeBNB(images[0], images[1])#BNB accuracy: 0.454036
-   #computeSVMRBF(images[0], images[1])#SVMRBF accuracy: 0.780269
-   #computeKNN(images[0], images[1]) #KNN accuracy: 0.757848
-   print "Encerrando"
-
-
+   imagesDigits, imagesLetters = getImages()
+   method = computeKNN
+   # computeBNB      #BNB accuracy: 0.565149 | 0.400000
+   # computeSVMRBF   #SVMRBF accuracy: 0.896389 | 0.627451
+   # computeKNN      #KNN accuracy: 0.827316 | 0.737255
+   print "Digits:",
+   method(imagesDigits[0], imagesDigits[1])
+   print "Letters:",
+   method(imagesLetters[0], imagesLetters[1])
 
 main()
