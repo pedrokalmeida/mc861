@@ -6,3 +6,7 @@
 - Se começar a faltar muita dependencia, tentem instalar o Anaconda: https://www.continuum.io/downloads
 
 - Ou, pro windows: http://www.lfd.uci.edu/~gohlke/pythonlibs
+
+
+
+- Instalar a blblioteca scikit-image: http://scikit-image.org/download.html

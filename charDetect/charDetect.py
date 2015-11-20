@@ -10,6 +10,7 @@ import sklearn.decomposition as deco
 from sklearn.cross_validation import train_test_split
 from sklearn.naive_bayes import BernoulliNB
 from scipy.spatial.distance import cosine
+from skimage.feature import hog
 
 digitsPath = "./gray-digits.20x16.0.0/"
 lettersPath = "./gray-letters.20x16.0.0/"
@@ -38,13 +39,15 @@ def read_pgm(filename, byteorder='>'):
 
 
 def getImage(filename):
-   image = []
+   #image = []
    imageMatrix = read_pgm(filename)
-   for imageVector in imageMatrix:
-      for pixel in imageVector:
-         image.append(float(pixel))
+   
+#   for imageVector in imageMatrix:
+#      for pixel in imageVector:
+#         image.append(float(pixel))
 
-   return image
+#   return image
+   return hog(imageMatrix, orientations=8, pixels_per_cell=(5, 4), cells_per_block=(1, 1))
 
 def getImageCategory(imageDir, imageName):
    if imageDir == digitsPath:
@@ -185,9 +188,9 @@ def getImages():
 def main():
    imagesDigits, imagesLetters = getImages()
    method = computeKNN
-   # computeBNB      #BNB accuracy: 0.565149 | 0.400000
-   # computeSVMRBF   #SVMRBF accuracy: 0.896389 | 0.627451
-   # computeKNN      #KNN accuracy: 0.827316 | 0.737255
+   # computeBNB      #BNB accuracy: 0.869702 | 0.580392
+   # computeSVMRBF   #SVMRBF accuracy: 0.968603 | 0.847059
+   # computeKNN      #KNN accuracy: 0.959184 | 0.882353
    print "Digits:",
    method(imagesDigits[0], imagesDigits[1])
    print "Letters:",
